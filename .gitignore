@@ -25,3 +25,6 @@ replay_pid*
 
 # intellij things
 .idea
+
+# ignore the target directory
+target
