@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity(name="person")
@@ -22,7 +23,7 @@ public class Person {
 
     private Long partnerId;
 
-    private List<Long> childIds;
+    private List<Long> childIds = new ArrayList<>();
 
     public Long getId() {
         return id;

@@ -12,7 +12,7 @@ public class PersonMapper {
         var personDto = new PersonDto();
         personDto.setId(person.getId());
         personDto.setName(person.getName());
-        personDto.setBirthDate(person.getDateOfBirth().toString());
+        personDto.setBirthDate(person.getDateOfBirth() != null ? person.getDateOfBirth().toString() : null);
 
         var parent1 = new PersonDto();
         parent1.setId(person.getParent1Id());
@@ -40,7 +40,7 @@ public class PersonMapper {
         var person = new Person();
         person.setId(personDto.getId());
         person.setName(personDto.getName());
-        person.setDateOfBirth(LocalDate.parse(personDto.getBirthDate()));
+        person.setDateOfBirth(personDto.getBirthDate() != null ? LocalDate.parse(personDto.getBirthDate()) : null);
         person.setParent1Id(personDto.getParent1() != null ? personDto.getParent1().getId() : null);
         person.setParent2Id(personDto.getParent2() != null ? personDto.getParent2().getId() : null);
         person.setPartnerId(personDto.getPartner() != null ? personDto.getPartner().getId() : null);

@@ -7,6 +7,7 @@ import nl.prlg.three.kid.family.repository.PersonRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,27 +28,37 @@ public class PersonService {
     }
 
     void enforceBidirectionalIntegrity(Person person) {
-        var children = personRepository.findAllById(person.getChildIds());
-        children.forEach(child -> {
-            boolean needsUpdate = false;
+        List<Person> personsToSave = new ArrayList<>();
+        person.getChildIds().forEach(childId -> {
+            var child = personRepository.findById(childId).orElse(new Person());
 
-            if (child.getParent1Id() == null && child.getParent2Id() == null) {
-                child.setParent1Id(person.getId());
-                needsUpdate = true;
-            }
-            else if (child.getParent1Id() != null && child.getParent2Id() == null) {
+            if (child.getParent1Id() != null && child.getParent2Id() == null) {
                 child.setParent2Id(person.getId());
-                needsUpdate = true;
             }
-            else if (child.getParent1Id() == null && child.getParent2Id() != null) {
+            else if ((child.getParent1Id() == null && child.getParent2Id() == null) || (child.getParent1Id() == null && child.getParent2Id() != null)) {
                 child.setParent1Id(person.getId());
-                needsUpdate = true;
             }
 
-            if (needsUpdate) {
-                personRepository.save(child);
-            }
+            child.setId(childId);
+            personsToSave.add(child);
         });
+
+        var parent1 = person.getParent1Id() != null ? personRepository.findById(person.getParent1Id()).orElse(new Person()) : null;
+        var parent2 = person.getParent2Id() != null ? personRepository.findById(person.getParent2Id()).orElse(new Person()) : null;
+
+        if (parent1 != null && !parent1.getChildIds().contains(person.getId())) {
+            parent1.getChildIds().add(person.getId());
+            parent1.setId(person.getParent1Id());
+            personsToSave.add(parent1);
+        }
+
+        if (parent2 != null && !parent2.getChildIds().contains(person.getId())) {
+            parent2.getChildIds().add(person.getId());
+            parent2.setId(person.getParent2Id());
+            personsToSave.add(parent2);
+        }
+
+        personRepository.saveAll(personsToSave);
     }
 
     List<Person> findThreeKidFamilies() {

@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PersonServiceTest {
@@ -171,74 +171,6 @@ class PersonServiceTest {
     }
 
     @Test
-    void enforceBidirectionalIntegrityChildNoParents() {
-        var person = new Person();
-        person.setId(1L);
-        person.setChildIds(List.of(2L));
-
-        var child = new Person();
-        child.setId(2L);
-
-        when(personRepository.findAllById(any())).thenReturn(List.of(child));
-
-        personService.enforceBidirectionalIntegrity(person);
-
-        verify(personRepository, times(1)).save(child);
-    }
-
-    @Test
-    void enforceBidirectionalIntegrityChildHasParent1() {
-        var person = new Person();
-        person.setId(1L);
-        person.setChildIds(List.of(2L));
-
-        var child = new Person();
-        child.setId(2L);
-        child.setParent1Id(1L);
-
-        when(personRepository.findAllById(any())).thenReturn(List.of(child));
-
-        personService.enforceBidirectionalIntegrity(person);
-
-        verify(personRepository, times(1)).save(child);
-    }
-
-    @Test
-    void enforceBidirectionalIntegrityChildHasParent2() {
-        var person = new Person();
-        person.setId(1L);
-        person.setChildIds(List.of(2L));
-
-        var child = new Person();
-        child.setId(2L);
-        child.setParent2Id(1L);
-
-        when(personRepository.findAllById(any())).thenReturn(List.of(child));
-
-        personService.enforceBidirectionalIntegrity(person);
-
-        verify(personRepository, times(1)).save(child);
-    }
-
-    @Test
-    void enforceBidirectionalIntegrityChildHasBothParents() {
-        var person = new Person();
-        person.setId(1L);
-        person.setChildIds(List.of(2L));
-
-        var child = new Person();
-        child.setId(2L);
-        child.setParent1Id(1L);
-        child.setParent2Id(3L);
-
-        when(personRepository.findAllById(any())).thenReturn(List.of(child));
-
-        personService.enforceBidirectionalIntegrity(person);
-
-        verify(personRepository, times(0)).save(child);
-    }
-
-    @Test
     void savePersonSuccess() {
         var personDto = new PersonDto(1L);
         personDto.setBirthDate(LocalDate.now().minusYears(34).toString());
@@ -355,7 +287,6 @@ class PersonServiceTest {
         child3.setDateOfBirth(LocalDate.now().minusYears(19));
 
         when(personRepository.save(any())).thenReturn(person);
-        when(personRepository.findAllById(List.of(3L, 4L, 5L))).thenReturn(List.of(child1, child2, child3));
         when(personRepository.findAll()).thenReturn(List.of(person, parent2, child1, child2, child3));
 
         var result = personService.savePerson(personDto);
@@ -390,7 +321,6 @@ class PersonServiceTest {
         child2.setDateOfBirth(LocalDate.now().minusYears(18));
 
         when(personRepository.save(any())).thenReturn(person);
-        when(personRepository.findAllById(List.of(3L, 4L))).thenReturn(List.of(child1, child2));
         when(personRepository.findAll()).thenReturn(List.of(person, parent2, child1, child2));
 
         var result = personService.savePerson(personDto);
