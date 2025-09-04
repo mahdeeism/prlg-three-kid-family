@@ -9,11 +9,12 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class PersonMapperTest {
 
     @Test
-    public void toPersonDtoTest() {
+    public void toPersonDto() {
         var person = new Person();
         person.setId(1L);
         person.setName("John Doe");
@@ -35,7 +36,24 @@ public class PersonMapperTest {
     }
 
     @Test
-    public void toPersonTest() {
+    public void toPersonDtoWithoutDateOfBirth() {
+        var person = new Person();
+        person.setId(1L);
+        person.setName("John Doe");
+        person.setDateOfBirth(null);
+        person.setPartnerId(2L);
+        person.setParent1Id(3L);
+        person.setParent2Id(4L);
+        person.setChildIds(List.of(5L, 6L, 7L, 8L, 9L));
+
+        var result = PersonMapper.toPersonDto(person);
+
+        assertEquals(result.getId(), person.getId());
+        assertNull(result.getBirthDate());
+   }
+
+    @Test
+    public void toPerson() {
         var personDto = new PersonDto();
         personDto.setId(1L);
         personDto.setName("John Doe");
@@ -68,4 +86,36 @@ public class PersonMapperTest {
         assertEquals(result.getParent2Id(), personDto.getParent2().getId());
         assertEquals(result.getChildIds(), personDto.getChildren().stream().map(PersonDto::getId).toList());
     }
+
+    @Test
+    public void toPersonWithoutDateOfBirth() {
+        var personDto = new PersonDto();
+        personDto.setId(1L);
+        personDto.setName("John Doe");
+        personDto.setBirthDate(null);
+
+        var parent1Dto = new PersonDto();
+        parent1Dto.setId(1L);
+        var parent2Dto = new PersonDto();
+        parent2Dto.setId(2L);
+        var partnerDto = new PersonDto();
+        partnerDto.setId(3L);
+
+        personDto.setParent1(parent1Dto);
+        personDto.setParent2(parent2Dto);
+        personDto.setPartner(partnerDto);
+
+        var child1Dto = new PersonDto();
+        child1Dto.setId(8L);
+        var child2Dto = new PersonDto();
+        child2Dto.setId(9L);
+
+        personDto.setChildren(List.of(child1Dto, child2Dto));
+
+        var result = PersonMapper.toPerson(personDto);
+
+        assertEquals(result.getId(), personDto.getId());
+        assertEquals(result.getName(), personDto.getName());
+        assertNull(result.getDateOfBirth());
+   }
 }

@@ -64,7 +64,7 @@ public class PersonControllerV1Test {
     }
 
     @Test
-    void testSavePersonNoMatchesReturns444() {
+    void savePersonNoMatchesReturns444() {
         var person = new PersonDto();
         person.setId(5L);
         person.setName("Amy Apples");
@@ -80,7 +80,7 @@ public class PersonControllerV1Test {
     }
 
     @Test
-    void testSavePersonMatchesReturns200() {
+    void savePersonMatchesReturns200() {
         var personRequest = new PersonDto();
         personRequest.setId(5L);
         personRequest.setName("Elia Elderberries");

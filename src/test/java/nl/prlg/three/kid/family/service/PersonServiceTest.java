@@ -5,18 +5,25 @@ import nl.prlg.three.kid.family.entity.Person;
 import nl.prlg.three.kid.family.repository.PersonRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 
 @ExtendWith(MockitoExtension.class)
 class PersonServiceTest {
@@ -171,7 +178,7 @@ class PersonServiceTest {
     }
 
     @Test
-    void savePersonSuccess() {
+    void savePersonSingleMatch() {
         var personDto = new PersonDto(1L);
         personDto.setBirthDate(LocalDate.now().minusYears(34).toString());
 
@@ -367,5 +374,157 @@ class PersonServiceTest {
         var result = personService.savePerson(personDto);
 
         assertThat(result).hasSize(0);
+    }
+
+    @Test
+    void enforceBidirectionalIntegrityChildWithoutPersistedParents() {
+        ArgumentCaptor<List<Person>> captor = ArgumentCaptor.forClass(List.class);
+
+        var child = new Person();
+        child.setParent1Id(1L);
+        child.setParent2Id(2L);
+
+        personService.enforceBidirectionalIntegrity(child);
+
+        verify(personRepository, times(1)).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(2);
+        assertEquals(1L, captor.getValue().get(0).getId());
+        assertEquals(2L, captor.getValue().get(1).getId());
+    }
+
+    @Test
+    void enforceBidirectionalIntegrityChildHasOnePersistedParent() {
+        ArgumentCaptor<List<Person>> captor = ArgumentCaptor.forClass(List.class);
+
+        var parent1ChildIds = new ArrayList<Long>();
+        parent1ChildIds.add(4L);
+
+        var parent1 = new Person();
+        parent1.setId(1L);
+        parent1.setChildIds(parent1ChildIds);
+
+        var child = new Person();
+        child.setId(3L);
+        child.setParent1Id(1L);
+        child.setParent2Id(2L);
+
+        when(personRepository.findById(1L)).thenReturn(Optional.of(parent1));
+
+        personService.enforceBidirectionalIntegrity(child);
+
+        verify(personRepository, times(1)).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(2);
+        assertEquals(1L, captor.getValue().get(0).getId());
+        assertEquals(List.of(4L, 3L), captor.getValue().get(0).getChildIds());
+        assertEquals(2L, captor.getValue().get(1).getId());
+        assertEquals(List.of(3L), captor.getValue().get(1).getChildIds());
+    }
+
+    @Test
+    void enforceBidirectionalIntegrityChildHasOnePersistedParent1IncludingChildId() {
+        ArgumentCaptor<List<Person>> captor = ArgumentCaptor.forClass(List.class);
+
+        var parent1ChildIds = new ArrayList<Long>();
+        parent1ChildIds.add(3L);
+
+        var parent1 = new Person();
+        parent1.setId(1L);
+        parent1.setChildIds(parent1ChildIds);
+
+        var child = new Person();
+        child.setId(3L);
+        child.setParent1Id(1L);
+
+        when(personRepository.findById(1L)).thenReturn(Optional.of(parent1));
+
+        personService.enforceBidirectionalIntegrity(child);
+
+        verify(personRepository, times(1)).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(0);
+    }
+
+    @Test
+    void enforceBidirectionalIntegrityChildHasOnePersistedParent2IncludingChildId() {
+        ArgumentCaptor<List<Person>> captor = ArgumentCaptor.forClass(List.class);
+
+        var parent2ChildIds = new ArrayList<Long>();
+        parent2ChildIds.add(3L);
+
+        var parent2 = new Person();
+        parent2.setId(1L);
+        parent2.setChildIds(parent2ChildIds);
+
+        var child = new Person();
+        child.setId(3L);
+        child.setParent2Id(1L);
+
+        when(personRepository.findById(1L)).thenReturn(Optional.of(parent2));
+
+        personService.enforceBidirectionalIntegrity(child);
+
+        verify(personRepository, times(1)).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(0);
+    }
+
+    @Test
+    void enforceBidirectionalIntegrityParentWithoutPersistedChildren() {
+        ArgumentCaptor<List<Person>> captor = ArgumentCaptor.forClass(List.class);
+
+        var parent = new Person();
+        parent.setId(1L);
+        parent.setChildIds(List.of(2L, 3L));
+
+        personService.enforceBidirectionalIntegrity(parent);
+
+        verify(personRepository, times(1)).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(2);
+        assertEquals(2L, captor.getValue().get(0).getId());
+        assertEquals(3L, captor.getValue().get(1).getId());
+    }
+
+    @Test
+    void enforceBidirectionalIntegrityParent1WithPersistedChild() {
+        ArgumentCaptor<List<Person>> captor = ArgumentCaptor.forClass(List.class);
+
+        var parent = new Person();
+        parent.setId(4L);
+        parent.setChildIds(List.of(2L, 3L));
+
+        var child1 = new Person();
+        child1.setId(2L);
+        child1.setParent1Id(1L);
+
+        when(personRepository.findById(2L)).thenReturn(Optional.of(child1));
+
+        personService.enforceBidirectionalIntegrity(parent);
+
+        verify(personRepository, times(1)).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(2);
+        assertEquals(2L, captor.getValue().get(0).getId());
+        assertEquals(4L, captor.getValue().get(0).getParent2Id());
+        assertEquals(3L, captor.getValue().get(1).getId());
+    }
+
+    @Test
+    void enforceBidirectionalIntegrityParent2WithPersistedChild() {
+        ArgumentCaptor<List<Person>> captor = ArgumentCaptor.forClass(List.class);
+
+        var parent = new Person();
+        parent.setId(4L);
+        parent.setChildIds(List.of(2L, 3L));
+
+        var child1 = new Person();
+        child1.setId(2L);
+        child1.setParent2Id(1L);
+
+        when(personRepository.findById(2L)).thenReturn(Optional.of(child1));
+
+        personService.enforceBidirectionalIntegrity(parent);
+
+        verify(personRepository, times(1)).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(2);
+        assertEquals(2L, captor.getValue().get(0).getId());
+        assertEquals(4L, captor.getValue().get(0).getParent1Id());
+        assertEquals(3L, captor.getValue().get(1).getId());
     }
 }
