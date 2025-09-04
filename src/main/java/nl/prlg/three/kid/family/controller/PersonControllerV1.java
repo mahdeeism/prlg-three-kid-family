@@ -20,6 +20,7 @@ public class PersonControllerV1 implements ApiController {
 
     @Override
     public ResponseEntity<List<PersonDto>> savePerson(PersonDto personDto) {
-        return ResponseEntity.ok().body(personService.savePerson(personDto));
+        var matchedPeople = personService.savePerson(personDto);
+        return matchedPeople.isEmpty() ? ResponseEntity.status(444).build() : ResponseEntity.ok(matchedPeople);
     }
 }

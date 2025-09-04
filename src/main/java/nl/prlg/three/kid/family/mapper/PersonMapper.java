@@ -4,6 +4,7 @@ import nl.prlg.three.kid.family.dto.PersonDto;
 import nl.prlg.three.kid.family.entity.Person;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public class PersonMapper {
 
@@ -11,7 +12,7 @@ public class PersonMapper {
         var personDto = new PersonDto();
         personDto.setId(person.getId());
         personDto.setName(person.getName());
-        personDto.setBirthDate(person.getDateOfBirth().toString());
+        personDto.setBirthDate(person.getDateOfBirth() != null ? person.getDateOfBirth().toString() : null);
 
         var parent1 = new PersonDto();
         parent1.setId(person.getParent1Id());
@@ -39,11 +40,11 @@ public class PersonMapper {
         var person = new Person();
         person.setId(personDto.getId());
         person.setName(personDto.getName());
-        person.setDateOfBirth(LocalDate.parse(personDto.getBirthDate()));
-        person.setParent1Id(personDto.getParent1().getId());
-        person.setParent2Id(personDto.getParent2().getId());
-        person.setPartnerId(personDto.getPartner().getId());
-        person.setChildIds(personDto.getChildren().stream().map(PersonDto::getId).toList());
+        person.setDateOfBirth(personDto.getBirthDate() != null ? LocalDate.parse(personDto.getBirthDate()) : null);
+        person.setParent1Id(personDto.getParent1() != null ? personDto.getParent1().getId() : null);
+        person.setParent2Id(personDto.getParent2() != null ? personDto.getParent2().getId() : null);
+        person.setPartnerId(personDto.getPartner() != null ? personDto.getPartner().getId() : null);
+        person.setChildIds(personDto.getChildren() != null ? personDto.getChildren().stream().map(PersonDto::getId).toList() : List.of());
 
         return person;
     }
