@@ -1,7 +1,10 @@
 package nl.prlg.three.kid.family.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.util.List;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class PersonDto {
     private Long id;
     private String name;
