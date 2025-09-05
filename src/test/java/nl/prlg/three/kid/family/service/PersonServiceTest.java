@@ -24,7 +24,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-
 @ExtendWith(MockitoExtension.class)
 class PersonServiceTest {
 
@@ -377,96 +376,6 @@ class PersonServiceTest {
     }
 
     @Test
-    void enforceBidirectionalIntegrityChildWithoutPersistedParents() {
-        ArgumentCaptor<List<Person>> captor = ArgumentCaptor.forClass(List.class);
-
-        var child = new Person();
-        child.setParent1Id(1L);
-        child.setParent2Id(2L);
-
-        personService.enforceBidirectionalIntegrity(child);
-
-        verify(personRepository, times(1)).saveAll(captor.capture());
-        assertThat(captor.getValue()).hasSize(2);
-        assertEquals(1L, captor.getValue().get(0).getId());
-        assertEquals(2L, captor.getValue().get(1).getId());
-    }
-
-    @Test
-    void enforceBidirectionalIntegrityChildHasOnePersistedParent() {
-        ArgumentCaptor<List<Person>> captor = ArgumentCaptor.forClass(List.class);
-
-        var parent1ChildIds = new ArrayList<Long>();
-        parent1ChildIds.add(4L);
-
-        var parent1 = new Person();
-        parent1.setId(1L);
-        parent1.setChildIds(parent1ChildIds);
-
-        var child = new Person();
-        child.setId(3L);
-        child.setParent1Id(1L);
-        child.setParent2Id(2L);
-
-        when(personRepository.findById(1L)).thenReturn(Optional.of(parent1));
-
-        personService.enforceBidirectionalIntegrity(child);
-
-        verify(personRepository, times(1)).saveAll(captor.capture());
-        assertThat(captor.getValue()).hasSize(2);
-        assertEquals(1L, captor.getValue().get(0).getId());
-        assertEquals(List.of(4L, 3L), captor.getValue().get(0).getChildIds());
-        assertEquals(2L, captor.getValue().get(1).getId());
-        assertEquals(List.of(3L), captor.getValue().get(1).getChildIds());
-    }
-
-    @Test
-    void enforceBidirectionalIntegrityChildHasOnePersistedParent1IncludingChildId() {
-        ArgumentCaptor<List<Person>> captor = ArgumentCaptor.forClass(List.class);
-
-        var parent1ChildIds = new ArrayList<Long>();
-        parent1ChildIds.add(3L);
-
-        var parent1 = new Person();
-        parent1.setId(1L);
-        parent1.setChildIds(parent1ChildIds);
-
-        var child = new Person();
-        child.setId(3L);
-        child.setParent1Id(1L);
-
-        when(personRepository.findById(1L)).thenReturn(Optional.of(parent1));
-
-        personService.enforceBidirectionalIntegrity(child);
-
-        verify(personRepository, times(1)).saveAll(captor.capture());
-        assertThat(captor.getValue()).hasSize(0);
-    }
-
-    @Test
-    void enforceBidirectionalIntegrityChildHasOnePersistedParent2IncludingChildId() {
-        ArgumentCaptor<List<Person>> captor = ArgumentCaptor.forClass(List.class);
-
-        var parent2ChildIds = new ArrayList<Long>();
-        parent2ChildIds.add(3L);
-
-        var parent2 = new Person();
-        parent2.setId(1L);
-        parent2.setChildIds(parent2ChildIds);
-
-        var child = new Person();
-        child.setId(3L);
-        child.setParent2Id(1L);
-
-        when(personRepository.findById(1L)).thenReturn(Optional.of(parent2));
-
-        personService.enforceBidirectionalIntegrity(child);
-
-        verify(personRepository, times(1)).saveAll(captor.capture());
-        assertThat(captor.getValue()).hasSize(0);
-    }
-
-    @Test
     void enforceBidirectionalIntegrityParentWithoutPersistedChildren() {
         ArgumentCaptor<List<Person>> captor = ArgumentCaptor.forClass(List.class);
 
@@ -526,5 +435,222 @@ class PersonServiceTest {
         assertEquals(2L, captor.getValue().get(0).getId());
         assertEquals(4L, captor.getValue().get(0).getParent1Id());
         assertEquals(3L, captor.getValue().get(1).getId());
+    }
+
+    @Test
+    void shouldUpdateParent1Success() {
+        var parent = new Person();
+        parent.setId(1L);
+
+        var child = new Person();
+        child.setId(2L);
+        child.setParent2Id(3L);
+
+        var result = personService.shouldUpdateParent1(parent, child);
+
+        assertTrue(result);
+    }
+
+    @Test
+    void shouldUpdateParent1Fail() {
+        var parent = new Person();
+        parent.setId(1L);
+
+        var child = new Person();
+        child.setId(2L);
+        child.setParent1Id(1L);
+
+        var result = personService.shouldUpdateParent1(parent, child);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void shouldUpdateParent1FailBothParentsDefined() {
+        var parent = new Person();
+        parent.setId(1L);
+
+        var child = new Person();
+        child.setId(2L);
+        child.setParent1Id(5L);
+        child.setParent2Id(6L);
+
+        var result = personService.shouldUpdateParent1(parent, child);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void shouldUpdateParent1SuccessChildHasNoParents() {
+        var parent = new Person();
+        parent.setId(1L);
+
+        var child = new Person();
+        child.setId(2L);
+
+        var result = personService.shouldUpdateParent1(parent, child);
+
+        assertTrue(result);
+    }
+
+    @Test
+    void shouldUpdateParent2Success() {
+        var parent = new Person();
+        parent.setId(1L);
+
+        var child = new Person();
+        child.setId(2L);
+        child.setParent1Id(3L);
+
+        var result = personService.shouldUpdateParent2(parent, child);
+
+        assertTrue(result);
+    }
+
+    @Test
+    void shouldUpdateParent2Fail() {
+        var parent = new Person();
+        parent.setId(1L);
+
+        var child = new Person();
+        child.setId(2L);
+        child.setParent2Id(1L);
+
+        var result = personService.shouldUpdateParent2(parent, child);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void getChildrenToUpdatePersonWithNoKids() {
+        var person = new Person();
+        person.setId(4L);
+
+        var result = personService.getChildrenToUpdate(person);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getChildrenToUpdatePersonWithChildWithoutParent2() {
+        var parent = new Person();
+        parent.setId(5L);
+        parent.setChildIds(List.of(2L));
+
+        var child1 = new Person();
+        child1.setId(2L);
+        child1.setParent1Id(1L);
+
+        when(personRepository.findById(2L)).thenReturn(Optional.of(child1));
+
+        var result = personService.getChildrenToUpdate(parent);
+
+        assertThat(result).hasSize(1);
+        assertEquals(5L, result.getFirst().getParent2Id());
+    }
+
+    @Test
+    void getChildrenToUpdatePersonWithTwoKidsWhereOneIsAlreadyPersistedWithParent1() {
+        var parent = new Person();
+        parent.setId(1L);
+        parent.setChildIds(List.of(2L, 3L));
+
+        var child1 = new Person();
+        child1.setId(2L);
+        child1.setParent1Id(1L);
+
+        when(personRepository.findById(2L)).thenReturn(Optional.of(child1));
+
+        var result = personService.getChildrenToUpdate(parent);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getChildrenToUpdatePersonWithTwoKidsWhereOneIsAlreadyPersistedWithParent2() {
+        var parent = new Person();
+        parent.setId(1L);
+        parent.setChildIds(List.of(2L, 3L));
+
+        var child1 = new Person();
+        child1.setId(2L);
+        child1.setParent2Id(1L);
+
+        when(personRepository.findById(2L)).thenReturn(Optional.of(child1));
+
+        var result = personService.getChildrenToUpdate(parent);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getChildrenToUpdatePersonWithTwoKidsWhereNoneArePersisted() {
+        var parent = new Person();
+        parent.setId(1L);
+        parent.setChildIds(List.of(2L, 3L));
+
+        var result = personService.getChildrenToUpdate(parent);
+
+        assertThat(result).hasSize(2);
+        assertEquals(2L, result.get(0).getId());
+        assertEquals(3L, result.get(1).getId());
+    }
+
+    @Test
+    void getParentsToUpdatePersistNewParent1() {
+        var person = new Person();
+        person.setId(1L);
+        person.setParent1Id(2L);
+        person.setParent2Id(3L);
+
+        List<Long> childIds = new ArrayList<>();
+        childIds.add(1L);
+        childIds.add(5L);
+
+        var parent2 = new Person();
+        parent2.setId(3L);
+        parent2.setChildIds(childIds);
+
+        when(personRepository.findById(2L)).thenReturn(Optional.of(new Person()));
+        when(personRepository.findById(3L)).thenReturn(Optional.of(parent2));
+
+        var result = personService.getParentsToUpdate(person);
+
+        assertThat(result).hasSize(1);
+        assertEquals(2L, result.get(0).getId());
+    }
+
+    @Test
+    void getParentsToUpdatePersistNewParent2() {
+        var person = new Person();
+        person.setId(1L);
+        person.setParent1Id(3L);
+        person.setParent2Id(2L);
+
+        List<Long> childIds = new ArrayList<>();
+        childIds.add(1L);
+        childIds.add(5L);
+
+        var parent1 = new Person();
+        parent1.setId(3L);
+        parent1.setChildIds(childIds);
+
+        when(personRepository.findById(2L)).thenReturn(Optional.of(new Person()));
+        when(personRepository.findById(3L)).thenReturn(Optional.of(parent1));
+
+        var result = personService.getParentsToUpdate(person);
+
+        assertThat(result).hasSize(1);
+        assertEquals(2L, result.get(0).getId());
+    }
+
+    @Test
+    void getParentsToUpdateNoParents() {
+        var person = new Person();
+        person.setId(1L);
+
+        var result = personService.getParentsToUpdate(person);
+
+        assertThat(result).hasSize(0);
     }
 }

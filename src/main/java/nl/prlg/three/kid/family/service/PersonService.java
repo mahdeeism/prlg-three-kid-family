@@ -29,19 +29,33 @@ public class PersonService {
 
     void enforceBidirectionalIntegrity(Person person) {
         List<Person> personsToSave = new ArrayList<>();
+        personsToSave.addAll(getChildrenToUpdate(person));
+        personsToSave.addAll(getParentsToUpdate(person));
+
+        personRepository.saveAll(personsToSave);
+    }
+
+    List<Person> getChildrenToUpdate (Person person) {
+        List<Person> personsToSave = new ArrayList<>();
         person.getChildIds().forEach(childId -> {
             var child = personRepository.findById(childId).orElse(new Person());
-
-            if (child.getParent1Id() != null && child.getParent2Id() == null) {
-                child.setParent2Id(person.getId());
-            }
-            else if ((child.getParent1Id() == null && child.getParent2Id() == null) || (child.getParent1Id() == null && child.getParent2Id() != null)) {
-                child.setParent1Id(person.getId());
-            }
-
             child.setId(childId);
-            personsToSave.add(child);
+
+            if (shouldUpdateParent2(person, child)) {
+                child.setParent2Id(person.getId());
+                personsToSave.add(child);
+            }
+            else if (shouldUpdateParent1(person, child)) {
+                child.setParent1Id(person.getId());
+                personsToSave.add(child);
+            }
         });
+
+        return personsToSave;
+    }
+
+    List<Person> getParentsToUpdate (Person person) {
+        List<Person> personsToSave = new ArrayList<>();
 
         var parent1 = person.getParent1Id() != null ? personRepository.findById(person.getParent1Id()).orElse(new Person()) : null;
         var parent2 = person.getParent2Id() != null ? personRepository.findById(person.getParent2Id()).orElse(new Person()) : null;
@@ -58,7 +72,7 @@ public class PersonService {
             personsToSave.add(parent2);
         }
 
-        personRepository.saveAll(personsToSave);
+        return personsToSave;
     }
 
     List<Person> findThreeKidFamilies() {
@@ -77,6 +91,15 @@ public class PersonService {
     }
 
     boolean isUnder18(Person person) {
-        return LocalDate.now().getYear() - person.getDateOfBirth().getYear() < 18;
+        return person.getDateOfBirth() != null && LocalDate.now().getYear() - person.getDateOfBirth().getYear() < 18;
+    }
+
+    boolean shouldUpdateParent1(Person person, Person child) {
+        return (child.getParent1Id() == null && child.getParent2Id() == null) ||
+                (child.getParent1Id() == null && child.getParent2Id() != null && child.getParent2Id() != person.getId());
+    }
+
+    boolean shouldUpdateParent2(Person person, Person child) {
+        return child.getParent1Id() != null && child.getParent2Id() == null && child.getParent1Id() != person.getId();
     }
 }
